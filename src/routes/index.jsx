@@ -19,6 +19,8 @@ function RoutesApp() {
             <Route path='/customers' element={<Private><Customers/></Private>} />
             <Route path='/profile' element={<Private><Profile/></Private>} />
             <Route path='/new' element={<Private><New/></Private>} />
+
+            <Route path='/edit/:id' element={<Private><New/></Private>} />
         </Routes>
     )
 }

@@ -10,6 +10,7 @@ import { db } from '../../services/firebaseconnection'
 import './dashboard.css'
 
 import { format } from 'date-fns';
+import Modal from '../../components/Modal'
 
 const listRef = collection(db, 'chamados');
 
@@ -17,7 +18,13 @@ const Dashboard = () => {
 
   const [chamados, setChamados] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [isEmpty, setIsEmpty] = useState(false);
+  const [lastDocs, setLastDocs] = useState();
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const [showModal, setShowModal] = useState(false);
+  const [detail, setDetail] = useState();
 
   useEffect(() => {
     async function loadChamados() {
@@ -55,11 +62,29 @@ const Dashboard = () => {
         })
       })
 
+      const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1] //pegando ultimo item 
+
       setChamados(chamados => [...chamados, ...lista]);
+      setLastDocs(lastDoc);
 
     } else {
       setIsEmpty(true);
     }
+
+    setLoadingMore(false);
+  }
+
+  async function handleMore() {
+    setLoadingMore(true);
+
+    const q = query(listRef, orderBy('created', 'desc'), startAfter(lastDocs), limit(5));
+    const querySnapshot = await getDocs(q)
+    await updateState(querySnapshot);
+  }
+
+  function toggleModal(item) {
+    setShowModal(!showModal)
+    setDetail(item)
   }
 
   if(loading){
@@ -111,7 +136,7 @@ const Dashboard = () => {
                     <th scope='col'>Cliente</th>
                     <th scope='col'>Assunto</th>
                     <th scope='col'>Status</th>
-                    <th scope='col'>Cadastrando em</th>
+                    <th scope='col'>Cadastrado em</th>
                     <th scope='col'>#</th>
                   </tr>
                 </thead>
@@ -123,28 +148,41 @@ const Dashboard = () => {
                         <td data-label='cliente'>{item.cliente}</td>
                         <td data-label='Assunto'>{item.assunto}</td>
                         <td data-label='Status'>
-                          <span className='badge' style={{ backgroundColor: '#999' }}>{item.status}</span>
+                          <span className='badge' style={{ backgroundColor: item.status === 'Aberto' ? '#5cb85c' : '#999' }}>
+                            {item.status}
+                          </span>
                         </td>
                         <td data-label='Cadastrado'>{item.createdFormat}</td>
                         <td data-label='#'>
-                          <button className='action' style={{ backgroundColor: '#3583f6' }}>
+                          <button onClick={() => toggleModal(item)} className='action' style={{ backgroundColor: '#3583f6' }}>
                             <FiSearch color='#fff' size={17} />
                           </button>
-                          <button className='action' style={{ backgroundColor: '#f6a935' }}>
+                          <Link to={`/edit/${item.id}`} className='action' style={{ backgroundColor: '#f6a935' }}>
                             <FiEdit2 color='#fff' size={17} />
-                          </button>
+                          </Link>
                         </td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
+
+              {loadingMore && <h3>Buscando mais chamados...</h3>}
+              {!loadingMore && !isEmpty && <button className='btn-more' onClick={handleMore}>Buscar mais</button>}
             </>
           )}
 
         </>
 
       </div>
+
+      {showModal && (
+        <Modal
+          conteudo={detail}
+          close={() => setShowModal(!showModal)}
+        />
+      )}
+
     </div>
   )
 }
